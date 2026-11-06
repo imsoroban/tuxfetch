@@ -1,6 +1,6 @@
 # tuxfetch
 
-A minimalist, fast neofetch-like terminal system information script written in Bash with custom ANSI-painted ASCII art.
+A minimalist, fast neofetch-like terminal system information script written in Bash with custom ASCII art.
 
 ## Installation
 
