@@ -1,0 +1,158 @@
+#!/bin/bash
+
+USER_NAME=$USER
+HOST_NAME=$HOSTNAME
+OS=$(. /etc/os-release && echo "$NAME $VERSION")
+KERNEL=$(uname -sr)
+raw_seconds=$(cut -d. -f1 /proc/uptime)
+UPTIME="$((raw_seconds / 3600))h $(( (raw_seconds % 3600) / 60 ))m"
+SHELL_NAME=$(basename "$SHELL")
+SHELL_VER=$BASH_VERSION
+DE=$XDG_CURRENT_DESKTOP
+
+CPU=$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | sed -e 's/^[ \t]*//' -e 's/(R)//g' -e 's/(TM)//g' -e 's/CPU//g' -e 's/  */ /g')
+
+RAM=$(free -m | awk 'NR==2{printf "%sMiB / %sMiB\n", $3, $2}')
+DISK=$(df -h / | awk 'NR==2 {print $3 " / " $2 " (" $5 ")"}')
+ARCH=$(uname -m)
+
+ESC=$'\e'
+C_HEADER=$'\e[1;32m'
+C_LABEL=$'\e[1;34m'
+C_RESET=$'\e[0m'
+
+declare -A STYLE=(
+  [B]="38;5;240;48;5;236"
+  [W]="38;5;249;48;5;255"
+  [O]="38;5;172;48;5;214"
+)
+
+ORANGE_FEET=1
+if (( ORANGE_FEET )); then STYLE[F]=${STYLE[O]}; else STYLE[F]=${STYLE[B]}; fi
+
+mapfile -t ART <<'EOF'
+                .88888888:.
+               88888888.88888.
+             .8888888888888888.
+             888888888888888888
+             88' _`88'_  `88888
+             88 88 88 88  88888
+             88_88_::_88_:88888
+             88:::,::,:::::8888
+             88`:::::::::'`8888
+            .88  `::::'    8:88.
+           8888            `8:888.
+         .8888'             `888888.
+        .8888:..  .::.  ...:'8888888:.
+       .8888.'     :'     `'::`88:88888
+      .8888        '         `.888:8888.
+     888:8         .           888:88888
+   .888:88        .:           888:88888:
+   8888888.       ::           88:888888
+   `.::.888.      ::          .88888888
+  .::::::.888.    ::         :::`8888'.:.
+ ::::::::::.888   '         .::::::::::::
+ ::::::::::::.8    '      .:8::::::::::::.
+.::::::::::::::.        .:888:::::::::::::
+:::::::::::::::88:.__..:88888:::::::::::'
+ `'.:::::::::::88       88888:::::::::'
+   `'.::::::_:'88- '' -'888`':_::::'`
+EOF
+
+PAINT=(
+  "5:W:16:17"   "5:W:22:23"
+  "6:W:15:18"   "6:B:16:17"   "6:W:21:24"   "6:B:22:23"
+  "7:W:15:18"   "7:B:16:17"   "7:W:21:24"   "7:B:22:23"
+  "8:O:15:26"
+  "9:O:15:26"
+  "10:O:17:22"
+  "10:W:15:16"  "10:W:23:26"
+  "11:W:15:27"
+  "12:W:14:28"
+  "13:W:13:28"
+  "14:W:12:30"
+  "15:W:11:30"
+  "16:W:10:30"
+  "17:W:10:30"
+  "18:W:11:30"
+  "19:W:12:30"
+  "20:W:14:28"
+  "21:W:15:27"
+  "22:W:15:27"
+  "23:W:15:25"
+  "24:W:17:23"
+  "25:W:17:23"
+  "26:W:17:23"
+  "19:F:3:7"
+  "20:F:2:9"
+  "21:F:1:11"
+  "22:F:1:13"
+  "23:F:0:14"
+  "24:F:0:14"
+  "25:F:1:14"
+  "26:F:3:14"
+  "20:F:29:31"  "20:F:38:40"
+  "21:F:28:40"
+  "22:F:29:41"
+  "23:F:29:41"
+  "24:F:29:40"
+  "25:F:29:38"
+  "26:F:27:36"
+)
+
+declare -A MAP
+
+for i in "${!ART[@]}"; do
+  line=${ART[$i]}
+  lead=${line%%[! ]*}
+  trail=${line%"${line##*[! ]}"}
+  for (( c=${#lead}; c<${#trail}; c++ )); do MAP[$i,$c]=B; done
+done
+
+for spec in "${PAINT[@]}"; do
+  IFS=: read -r row style from to <<< "$spec"
+  for (( c=from; c<=to; c++ )); do MAP[$((row-1)),$c]=$style; done
+done
+
+INFO_ROW=4
+INFO=(
+  "${C_HEADER}${USER_NAME}${C_RESET}@${C_HEADER}${HOST_NAME}${C_RESET}"
+  "----------------------------------------"
+  "${C_LABEL}OS:${C_RESET}      $OS ($ARCH)"
+  "${C_LABEL}Kernel:${C_RESET}  $KERNEL"
+  "${C_LABEL}Uptime:${C_RESET}  $UPTIME"
+  "${C_LABEL}Shell:${C_RESET}   $SHELL_NAME $SHELL_VER"
+  "${C_LABEL}DE:${C_RESET}      $DE"
+  "${C_LABEL}CPU:${C_RESET}     $CPU"
+  "${C_LABEL}Memory:${C_RESET}  $RAM"
+  "${C_LABEL}Disk:${C_RESET}    $DISK"
+)
+
+WIDTH=0
+for line in "${ART[@]}"; do (( ${#line} > WIDTH )) && WIDTH=${#line}; done
+
+for i in "${!ART[@]}"; do
+  line=${ART[$i]}
+  out=""
+  prev=""
+  for (( c=0; c<WIDTH; c++ )); do
+    ch=${line:c:1}; ch=${ch:- }
+    style=${MAP[$i,$c]:-}
+    if [[ $style != "$prev" ]]; then
+      if [[ -z $style ]]; then
+        out+="${ESC}[0m"
+      else
+        out+="${ESC}[${STYLE[$style]}m"
+      fi
+      prev=$style
+    fi
+    out+=$ch
+  done
+  out+="${ESC}[0m"
+
+  info=""
+  j=$(( i - INFO_ROW ))
+  (( j >= 0 )) && info=${INFO[$j]}
+
+  printf '%s   %s\n' "$out" "$info"
+done
