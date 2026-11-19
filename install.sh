@@ -15,4 +15,4 @@ else
     sudo chmod +x "$INSTALL_PATH"
 fi
 
-echo "Successfully installed! You can now run 'tuxfetch' from anywhere."
+echo "Tuxfetch has successfully been "
