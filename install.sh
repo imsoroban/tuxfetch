@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-echo "Installing tuxfetch..."
+echo "Tuxfetch is under installation!"
 
 RAW_URL="https://raw.githubusercontent.com/imsoroban/tuxfetch/main/tuxfetch"
 INSTALL_PATH="/usr/local/bin/tuxfetch"
